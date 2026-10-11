@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stick Duel</title>
+<style>
+  :root { --ink: #1d1d1d; --paper: #f4efe3; --muted: #6b6457; --blue: #2f7fd6; --red: #d64545; --line: #d9d0bd; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--paper); color: var(--ink);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  button, input, textarea { font: inherit; }
+  button { border: 2px solid var(--ink); background: var(--ink); color: var(--paper); border-radius: 10px;
+    padding: 10px 16px; font-weight: 700; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--ink); }
+  button:disabled { opacity: .35; cursor: default; }
+  input, textarea { border: 2px solid var(--ink); border-radius: 10px; padding: 10px 12px; background: #fffdf7; width: 100%; }
+  #lobby { max-width: 420px; margin: 0 auto; padding: 48px 16px; display: grid; gap: 14px; }
+  #lobby h1 { font-size: 40px; margin: 0; letter-spacing: -1px; }
+  #lobby p { margin: 0 0 8px; color: var(--muted); }
+  .row { display: flex; gap: 8px; }
+  .row input { flex: 1; text-transform: uppercase; }
+  #game { max-width: 900px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; padding: 8px 12px 12px; gap: 8px; }
+  header { display: flex; align-items: center; gap: 10px; }
+  header strong { font-size: 18px; }
+  header .code { font-family: ui-monospace, monospace; background: #fffdf7; border: 2px solid var(--ink); border-radius: 8px; padding: 2px 8px; }
+  header #players { color: var(--muted); font-size: 14px; flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  header button { padding: 6px 12px; }
+  canvas { width: 100%; aspect-ratio: 1000 / 560; border: 2px solid var(--ink); border-radius: 12px; display: block; background: #e8e0cf; }
+  #status { font-weight: 600; min-height: 1.4em; }
+  #status.busy::after { content: ""; display: inline-block; width: 10px; height: 10px; margin-left: 8px; border-radius: 50%;
+    background: var(--ink); animation: pulse 0.9s infinite ease-in-out; }
+  @keyframes pulse { 50% { transform: scale(.4); opacity: .4; } }
+  #log { flex: 1; min-height: 90px; overflow-y: auto; border: 2px solid var(--line); border-radius: 12px; padding: 8px 10px;
+    background: #fffdf7; display: flex; flex-direction: column; gap: 6px; font-size: 15px; }
+  .msg.sys { color: var(--muted); }
+  .msg.you { font-weight: 600; }
+  .msg.act.p1 { color: var(--blue); } .msg.act.p2 { color: var(--red); }
+  .msg.narr { border-left: 3px solid var(--ink); padding-left: 8px; }
+  .msg.err { color: #b3261e; font-weight: 600; }
+  .chat { display: flex; gap: 8px; align-items: flex-end; }
+  .chat textarea { flex: 1; resize: none; height: 52px; }
+  #rematch { align-self: flex-start; }
+</style>
+</head>
+<body>
+  <section id="lobby">
+    <h1>Stick Duel</h1>
+    <p>Two players. Type anything. Claude makes your stick figure do it.</p>
+    <input id="name" maxlength="20" placeholder="Your name">
+    <button id="create">Create game</button>
+    <div class="row"><input id="code" maxlength="6" placeholder="Room code"><button id="join" class="ghost">Join</button></div>
+    <p id="joinhint" hidden>You were invited — enter your name and tap Join.</p>
+  </section>
+
+  <section id="game" hidden>
+    <header>
+      <strong>Stick Duel</strong><span class="code" id="roomcode"></span>
+      <span id="players"></span>
+      <button id="share" class="ghost">Invite</button>
+    </header>
+    <canvas id="arena"></canvas>
+    <div id="status"></div>
+    <button id="rematch" hidden>Rematch</button>
+    <div id="log"></div>
+    <div class="chat">
+      <textarea id="input" maxlength="300" placeholder="Describe your move…" disabled></textarea>
+      <button id="send" disabled>Send</button>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="renderer.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
