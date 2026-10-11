@@ -150,7 +150,7 @@ p1 is "${names.p1}" (hp ${state.p1.hp}). p2 is "${names.p2}" (hp ${state.p2.hp})
 <p1_action>${actions.p1 || "(nothing)"}</p1_action>
 <p2_action>${actions.p2 || "(nothing)"}</p2_action>
 
-Resolve this round with resolve_round.`;
+Resolve this round now by calling the resolve_round tool. Do not reply with text.`;
 
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -160,14 +160,20 @@ Resolve this round with resolve_round.`;
         max_tokens: 16000,
         system: SYSTEM,
         tools: [TOOL],
-        tool_choice: { type: "tool", name: "resolve_round" },
+        tool_choice: { type: "auto" },
         messages: [{ role: "user", content: user }],
       }),
     });
     if (!res.ok) return json({ error: `Claude API ${res.status}: ${(await res.text()).slice(0, 400)}` }, 502);
     const data = await res.json();
-    const r = data.content?.find((b: { type: string }) => b.type === "tool_use")?.input;
-    if (!r) return json({ error: "Claude returned no script." }, 502);
+    let r = data.content?.find((b: { type: string }) => b.type === "tool_use")?.input;
+    if (!r) {
+      // Fallback: Claude answered in text — pull out the JSON object if there is one.
+      const text = (data.content ?? []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("");
+      const m = text.match(/\{[\s\S]*\}/);
+      try { r = m ? JSON.parse(m[0]) : null; } catch { r = null; }
+    }
+    if (!r) return json({ error: "Claude returned no script. Try again." }, 502);
 
     // Sanitize and enforce limits.
     const out = {
