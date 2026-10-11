@@ -5,7 +5,7 @@ Two players, two stick figures, one chatbox each. Players type anything ("jump 1
 ## How it works
 
 - **index.html / game.js** — lobby with room codes, chatbox, and sync between players over Supabase Realtime (no database tables needed).
-- **renderer.js** — draws the arena and plays Claude's animation scripts: jointed stick figures, props (weapons, summoned objects), particle effects, hits, speech bubbles, screen shake.
+- **renderer.js** — plays Claude's animation scripts cinematically: jointed stick figures, props, particle effects, a camera that tracks and zooms, slow-motion, hit-stop, impact sparks and shockwaves, motion trails, landing dust, letterboxing and a K.O. finish. After a knockout it replays the whole fight round by round.
 - **supabase/functions/resolve-round** — Edge Function that sends both actions and the game state to Claude and returns the script. Your Claude API key lives here as a secret, never in the page.
 
 Each round both players lock in an action, then Player 1's browser asks the function to resolve it and broadcasts the result to everyone.
@@ -23,8 +23,9 @@ The function is already deployed to the Connect War project. To redeploy after e
 
 ## Limits and known gaps
 
-- Each round is one Claude call; expect roughly 10–40 seconds on Sonnet while it writes the animation.
+- Each round is one Claude call; expect roughly 20–60 seconds on Sonnet while it writes the animation. Supabase's free plan cuts function calls off at 150 seconds, so if long rounds time out, switch `CLAUDE_MODEL` to `claude-haiku-5-5`.
 - Damage is capped server-side (25 per hit, 35 per fighter per round), so "I win instantly" can't end the game.
 - Player actions are capped at 300 characters.
 - Anyone with the page can call the function, which spends your API credits. Set a monthly spend limit in the Anthropic console.
+- The final replay uses the rounds each browser saw, so someone who joined mid-fight only replays from when they joined.
 - Player 1's browser runs the round logic. If Player 1 closes the tab mid-game, the round stalls until they return.

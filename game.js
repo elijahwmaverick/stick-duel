@@ -20,6 +20,8 @@
   let pending = {};                // host only: { p1: text, p2: text }
   let display = R.initialState();  // what the canvas shows when idle
   let playing = false;
+  let rounds = [];                 // every round this client has seen, for the final replay
+  let replaying = false, skipReplay = false;
   let joinedAt = 0;
 
   // ---------- UI helpers ----------
@@ -46,13 +48,14 @@
   const earliest = () => roster()[0]?.id;
 
   function refreshUI() {
-    if (!playing) scene.drawStatic(display, names());
+    if (!playing && !replaying) scene.drawStatic(display, names());
     const slot = mySlot();
     const input = $("input"), send = $("send"), status = $("status"), rematch = $("rematch");
-    rematch.hidden = true;
+    rematch.hidden = true; $("watch").hidden = true; $("skip").hidden = !replaying;
     let canType = false, text = "";
     if (!snap) text = "Waiting for an opponent. Share the link to invite someone.";
-    else if (playing) text = "…";
+    else if (replaying) text = "Final replay";
+    else if (playing) text = "Fight!";
     else if (snap.phase === "input") {
       const s = snap.submitted;
       if (!slot) text = "Spectating. Waiting for both players.";
@@ -62,6 +65,7 @@
     else if (snap.phase === "over") {
       text = snap.winner === "draw" ? "Draw!" : `${names()[snap.winner]} wins!`;
       rematch.hidden = !slot;
+      $("watch").hidden = !rounds.length;
     }
     status.textContent = text;
     status.classList.toggle("busy", !!snap && snap.phase === "resolving");
@@ -75,6 +79,7 @@
 
   function adoptSnap(s) {
     const first = !snap;
+    if (snap && snap.phase === "over" && s.round === 1) { rounds = []; $("log").innerHTML = ""; log("sys", "Rematch!"); }
     snap = s;
     if (first || (!playing && s.round !== display._round)) { display = s.state; display._round = s.round; }
     refreshUI();
@@ -117,7 +122,7 @@
   }
 
   function startGame(players) {
-    pending = {};
+    pending = {}; rounds = [];
     snap = { phase: "input", round: 1, players, state: R.initialState(), submitted: { p1: false, p2: false }, history: [], winner: null };
     display = snap.state; display._round = 1;
     $("log").innerHTML = "";
@@ -163,12 +168,33 @@
     const n = m.names || names();
     log("act p1", `${n.p1}: ${m.actions.p1 || "(nothing)"}`);
     log("act p2", `${n.p2}: ${m.actions.p2 || "(nothing)"}`);
+    rounds.push({ base: m.base, result: m.result, names: n });
     playing = true; refreshUI();
     try { await scene.play(m.base, m.result, n); } catch (e) { console.error(e); }
     playing = false;
     log("narr", m.result.narration || "");
     display = m.newState; display._round = m.round + 1;
-    if (snap?.phase === "over") log("sys", snap.winner === "draw" ? "It's a draw!" : `${names()[snap.winner]} wins!`);
+    if (snap?.phase === "over") {
+      log("sys", snap.winner === "draw" ? "It's a draw!" : `${names()[snap.winner]} wins!`);
+      await runReplay();
+    }
+    refreshUI();
+  }
+
+  // Plays every round of the fight back to back after a KO.
+  async function runReplay() {
+    if (replaying || !rounds.length) return;
+    replaying = true; skipReplay = false; refreshUI();
+    const n = rounds[rounds.length - 1].names;
+    try {
+      await scene.card("FINAL REPLAY", `${n.p1} vs ${n.p2}`, 1800);
+      for (let i = 0; i < rounds.length && !skipReplay; i++) {
+        const r = rounds[i];
+        await scene.play(r.base, r.result, r.names, { label: `REPLAY  ·  ROUND ${i + 1} / ${rounds.length}` });
+      }
+      if (!skipReplay && snap?.winner) await scene.card(snap.winner === "draw" ? "DRAW" : `${names()[snap.winner].toUpperCase()} WINS`, "", 2200);
+    } catch (e) { console.error(e); }
+    replaying = false;
     refreshUI();
   }
 
@@ -214,6 +240,8 @@
   $("join").onclick = () => { const c = $("code").value.trim(); if (c.length >= 3) joinRoom(c); };
   $("send").onclick = submit;
   $("input").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } });
+  $("skip").onclick = () => { skipReplay = true; scene.stop(); };
+  $("watch").onclick = () => runReplay();
   $("rematch").onclick = () => (isHost() ? startGame(snap.players) : bcast({ type: "rematch" }));
   $("share").onclick = async () => {
     const url = location.href;

@@ -41,7 +41,8 @@
   .msg.err { color: #b3261e; font-weight: 600; }
   .chat { display: flex; gap: 8px; align-items: flex-end; }
   .chat textarea { flex: 1; resize: none; height: 52px; }
-  #rematch { align-self: flex-start; }
+  .buttons { display: flex; gap: 8px; }
+  .buttons:not(:has(button:not([hidden]))) { display: none; }
 </style>
 </head>
 <body>
@@ -62,7 +63,7 @@
     </header>
     <canvas id="arena"></canvas>
     <div id="status"></div>
-    <button id="rematch" hidden>Rematch</button>
+    <div class="buttons"><button id="skip" class="ghost" hidden>Skip replay</button><button id="watch" class="ghost" hidden>Watch replay</button><button id="rematch" hidden>Rematch</button></div>
     <div id="log"></div>
     <div class="chat">
       <textarea id="input" maxlength="300" placeholder="Describe your move…" disabled></textarea>
