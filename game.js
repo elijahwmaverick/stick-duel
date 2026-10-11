@@ -127,6 +127,7 @@
     display = snap.state; display._round = 1;
     $("log").innerHTML = "";
     log("sys", `${players.p1.name} (Blue) vs ${players.p2.name} (Red). Type what your figure does.`);
+    log("sys", "Focus wins: an all-out attack hits harder, pure defense blocks most damage and charges your next attack (it strikes first), and mixing actions splits your power.");
     pushSnap();
   }
 
